@@ -101,8 +101,7 @@ function createOrder(input) {
 
     const order = makeOrder({ ...input, id, orderDate });
     const ws = sheet(SHEETS.orders);
-    ws.insertRowAfter(1);
-    ws.getRange(2, 1, 1, 25).setValues([orderToRow(order)]);
+    ws.appendRow(orderToRow(order));
     return { success: true, order };
   } finally {
     lock.releaseLock();

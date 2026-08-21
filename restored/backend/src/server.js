@@ -163,7 +163,7 @@ app.post("/orders", async (req, res) => {
     res.status(409).json({ success: false, message: "order id already exists" });
     return;
   }
-  db.orders.unshift(order);
+  db.orders.push(order);
   await writeDb(db);
   res.status(201).json({ success: true, order: publicOrder(order) });
 });
