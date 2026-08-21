@@ -17,9 +17,17 @@ export default {
     };
   },
   computed: {
+    sortedOrders() {
+      return [...this.orders].sort((left, right) => {
+        const leftNumber = Number(String(left.id || "").match(/^A(\d+)$/)?.[1] || 0);
+        const rightNumber = Number(String(right.id || "").match(/^A(\d+)$/)?.[1] || 0);
+        if (leftNumber !== rightNumber) return rightNumber - leftNumber;
+        return String(right.orderDate || "").localeCompare(String(left.orderDate || ""));
+      });
+    },
     filteredOrders() {
-      if (!this.searchQuery) return this.orders;
-      return this.orders.filter((order) => order.customer.includes(this.searchQuery));
+      if (!this.searchQuery) return this.sortedOrders;
+      return this.sortedOrders.filter((order) => order.customer.includes(this.searchQuery));
     },
   },
   mounted() {
