@@ -1,0 +1,12 @@
+{
+  "name": "made-clothing-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:backend": "npm --prefix restored/backend run dev",
+    "dev:frontend": "npm --prefix restored/frontend run dev",
+    "build:frontend": "npm --prefix restored/frontend run build",
+    "reset:data": "node restored/scripts/reset-data.js"
+  }
+}

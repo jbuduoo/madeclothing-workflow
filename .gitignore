@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.npm-cache/
+*.log
+*.xlsx
+restored/**/node_modules/
+restored/**/dist/
+restored/frontend/public/order-images/
+restored/backend/data/*.json
+restored/backend/data/backups/
