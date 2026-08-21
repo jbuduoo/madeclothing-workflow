@@ -3,7 +3,9 @@ import placeholderUrl from "./assets/order-placeholder.svg";
 
 export { placeholderUrl };
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8787";
+const defaultApiBaseUrl =
+  "https://script.google.com/macros/s/AKfycbwkVywlbXPreMeCCxEmzxPFL_yuSNH-snAagykvtq-SFNABhCICDjsqKgd1RC8rITma/exec";
+const baseURL = import.meta.env.VITE_API_BASE_URL || defaultApiBaseUrl;
 const isAppsScript = /script\.google\.com|script\.googleusercontent\.com/.test(baseURL);
 const axiosApi = axios.create({ baseURL });
 
