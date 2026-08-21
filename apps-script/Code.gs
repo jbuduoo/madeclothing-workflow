@@ -137,17 +137,18 @@ function getWorkflowSteps(id) {
 }
 
 function getCompletedRecords(id) {
-  const rows = sheet(SHEETS.history).getDataRange().getDisplayValues();
-  const logs = rows
-    .slice(1)
-    .filter((row) => String(row[0]).trim() === String(id).trim())
-    .map((row) => ({
+  const ws = sheet(SHEETS.history);
+  const matches = findRowsByFirstColumn(ws, id);
+  const logs = matches.map((rowNumber) => {
+    const row = ws.getRange(rowNumber, 1, 1, 6).getDisplayValues()[0];
+    return {
       timestamp: row[1] || "",
       item: row[2] || "",
       user: row[3] || "",
       feedback: row[4] || "",
       isfinish: row[5] || "",
-    }));
+    };
+  });
   return { success: true, historyLogs: logs };
 }
 
@@ -170,11 +171,13 @@ function updateWorkflowStep(input) {
       .getRange(2, 1, 1, 6)
       .setValues([[input.orderId, timestamp, input.stepName, input.user || "", input.feedback || "", input.isfinish || ""]]);
 
-    const current = findOrder(input.orderId);
-    if (current && current.order.steps.every((step) => step.completed) && !current.order.completionTime) {
+    const updatedStepValues = ws.getRange(found.row, 11, 1, STEP_NAMES.length).getDisplayValues()[0];
+    const allStepsCompleted = updatedStepValues.every((value) => String(value).trim().toUpperCase() === "Y");
+    if (allStepsCompleted && !found.order.completionTime) {
       ws.getRange(found.row, ORDER_COLUMNS.completionTime).setValue(timestamp);
     }
-    return getOrder(input.orderId);
+    const updatedRow = ws.getRange(found.row, 1, 1, 25).getDisplayValues()[0];
+    return { success: true, order: rowToOrder(updatedRow), historyLogs: getCompletedRecords(input.orderId).historyLogs };
   } finally {
     lock.releaseLock();
   }
@@ -191,7 +194,33 @@ function readOrders() {
 }
 
 function findOrder(id) {
-  return readOrders().find((item) => String(item.order.id) === String(id));
+  const ws = sheet(SHEETS.orders);
+  const row = findFirstRowByFirstColumn(ws, id);
+  if (!row || row < 2) return null;
+  const values = ws.getRange(row, 1, 1, 25).getDisplayValues()[0];
+  return { row, order: rowToOrder(values) };
+}
+
+function findFirstRowByFirstColumn(ws, value) {
+  const lastRow = ws.getLastRow();
+  if (lastRow < 2) return null;
+  const match = ws
+    .getRange(2, 1, lastRow - 1, 1)
+    .createTextFinder(String(value))
+    .matchEntireCell(true)
+    .findNext();
+  return match ? match.getRow() : null;
+}
+
+function findRowsByFirstColumn(ws, value) {
+  const lastRow = ws.getLastRow();
+  if (lastRow < 2) return [];
+  return ws
+    .getRange(2, 1, lastRow - 1, 1)
+    .createTextFinder(String(value))
+    .matchEntireCell(true)
+    .findAll()
+    .map((range) => range.getRow());
 }
 
 function rowToOrder(row) {

@@ -100,7 +100,7 @@ export default {
     async handleSubmit() {
       const currentStep = this.workflowSteps[this.currentStepIndex];
       const completed = this.formData.completed === "true";
-      await api.post("/update-workflow-step", {
+      const response = await api.post("/update-workflow-step", {
         orderId: this.orderId,
         stepName: currentStep.name,
         completed,
@@ -109,7 +109,7 @@ export default {
         isfinish: completed ? "已完成" : "未完成",
       });
       currentStep.completed = completed;
-      await this.fetchCompletedRecords();
+      this.historyLogs = response.data.historyLogs || this.historyLogs;
       this.closeModal();
     },
   },
