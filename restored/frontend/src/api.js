@@ -4,7 +4,7 @@ import placeholderUrl from "./assets/order-placeholder.svg";
 export { placeholderUrl };
 
 const defaultApiBaseUrl =
-  "https://script.google.com/macros/s/AKfycbzJBFFuDbLltfCj0vr4GR5gHzZRwcGSe8YK-aOAcARAcRbxlwV0cOxD9nv1qwE2dSIB/exec";
+  "https://script.google.com/macros/s/AKfycbwiGkEsRaJuxXkkJoyKNgBkqLfhpwUXsrYByLmeYkexuzfMIAY95k4EWn2C32VrqDbf/exec";
 const baseURL = import.meta.env.VITE_API_BASE_URL || defaultApiBaseUrl;
 const isAppsScript = /script\.google\.com|script\.googleusercontent\.com/.test(baseURL);
 const axiosApi = axios.create({ baseURL });
