@@ -12,6 +12,8 @@ export default {
       error: "",
       saveMessage: "",
       isModalOpen: false,
+      submitting: false,
+      submitMessage: "",
       currentStepIndex: null,
       customerName: "",
       orderForm: {
@@ -92,25 +94,38 @@ export default {
     openForm(index) {
       this.currentStepIndex = index;
       this.formData = { user: this.$route.query.username || "test", feedback: "", completed: "" };
+      this.submitMessage = "";
       this.isModalOpen = true;
     },
     closeModal() {
+      if (this.submitting) return;
       this.isModalOpen = false;
     },
     async handleSubmit() {
+      if (this.submitting) return;
+      this.submitting = true;
+      this.submitMessage = "處理中，請稍候...";
       const currentStep = this.workflowSteps[this.currentStepIndex];
       const completed = this.formData.completed === "true";
-      const response = await api.post("/update-workflow-step", {
-        orderId: this.orderId,
-        stepName: currentStep.name,
-        completed,
-        user: this.formData.user,
-        feedback: this.formData.feedback,
-        isfinish: completed ? "已完成" : "未完成",
-      });
-      currentStep.completed = completed;
-      this.historyLogs = response.data.historyLogs || this.historyLogs;
-      this.closeModal();
+      try {
+        const response = await api.post("/update-workflow-step", {
+          orderId: this.orderId,
+          stepName: currentStep.name,
+          completed,
+          user: this.formData.user,
+          feedback: this.formData.feedback,
+          isfinish: completed ? "已完成" : "未完成",
+        });
+        currentStep.completed = completed;
+        if (response.data.historyLog) {
+          this.historyLogs = [response.data.historyLog, ...this.historyLogs];
+        }
+        this.isModalOpen = false;
+      } catch (error) {
+        this.submitMessage = error.response?.data?.message || "提交失敗，請稍後再試。";
+      } finally {
+        this.submitting = false;
+      }
     },
   },
   template: `
@@ -169,7 +184,8 @@ export default {
           <label>&#34389;&#29702;&#20154;&#21729;<input v-model="formData.user" required placeholder="&#36664;&#20837;&#20154;&#21517;" /></label>
           <label>&#22238;&#22577;&#20107;&#38917;<textarea v-model="formData.feedback" required placeholder="&#36664;&#20837;&#25991;&#23383;"></textarea></label>
           <label>&#26159;&#21542;&#23436;&#25104;<select v-model="formData.completed" required><option disabled value="">&#35531;&#36984;&#25799;</option><option value="true">&#24050;&#23436;&#25104;</option><option value="false">&#26410;&#23436;&#25104;</option></select></label>
-          <div class="form-actions"><button type="submit">&#25552;&#20132;</button><button type="button" @click="closeModal">&#21462;&#28040;</button></div>
+          <p v-if="submitMessage" class="submit-message" :class="{ error: !submitting && submitMessage.includes('失敗') }">{{ submitMessage }}</p>
+          <div class="form-actions"><button type="submit" :disabled="submitting">{{ submitting ? "處理中..." : "提交" }}</button><button type="button" :disabled="submitting" @click="closeModal">&#21462;&#28040;</button></div>
         </form>
       </div>
     </main>
