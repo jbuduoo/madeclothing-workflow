@@ -96,7 +96,7 @@ function createOrder(input) {
   lock.waitLock(10000);
   try {
     const orderDate = input.orderDate || Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
-    const id = input.id || `${orderDate.replaceAll("-", "")}-${String(Date.now()).slice(-4)}`;
+    const id = input.id || nextOrderId();
     if (findOrder(id)) return { success: false, message: "order id already exists" };
 
     const order = makeOrder({ ...input, id, orderDate });
@@ -158,18 +158,30 @@ function updateWorkflowStep(input) {
   try {
     const found = findOrder(input.orderId);
     if (!found) return { success: false, message: "order not found" };
-    const headers = sheet(SHEETS.orders).getRange(1, 1, 1, 25).getDisplayValues()[0];
-    const stepColumnIndex = headers.findIndex((name) => name === input.stepName) + 1;
+    const stepIndex = STEP_NAMES.indexOf(input.stepName);
+    const vendorIndex = VENDOR_NAMES.indexOf(input.stepName);
+    const stepColumnIndex = stepIndex >= 0 ? 11 + stepIndex : vendorIndex >= 0 ? 21 + vendorIndex : 0;
     if (!stepColumnIndex) return { success: false, message: "workflow step not found" };
 
     const ws = sheet(SHEETS.orders);
     ws.getRange(found.row, stepColumnIndex).setValue(input.completed ? "Y" : "");
 
     const timestamp = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/MM/dd HH:mm:ss");
-    sheet(SHEETS.history).insertRowAfter(1);
-    sheet(SHEETS.history)
-      .getRange(2, 1, 1, 6)
-      .setValues([[input.orderId, timestamp, input.stepName, input.user || "", input.feedback || "", input.isfinish || ""]]);
+    const historyLog = {
+      timestamp,
+      item: input.stepName,
+      user: input.user || "",
+      feedback: input.feedback || "",
+      isfinish: input.isfinish || "",
+    };
+    sheet(SHEETS.history).appendRow([
+      input.orderId,
+      historyLog.timestamp,
+      historyLog.item,
+      historyLog.user,
+      historyLog.feedback,
+      historyLog.isfinish,
+    ]);
 
     const updatedStepValues = ws.getRange(found.row, 11, 1, STEP_NAMES.length).getDisplayValues()[0];
     const allStepsCompleted = updatedStepValues.every((value) => String(value).trim().toUpperCase() === "Y");
@@ -177,7 +189,7 @@ function updateWorkflowStep(input) {
       ws.getRange(found.row, ORDER_COLUMNS.completionTime).setValue(timestamp);
     }
     const updatedRow = ws.getRange(found.row, 1, 1, 25).getDisplayValues()[0];
-    return { success: true, order: rowToOrder(updatedRow), historyLogs: getCompletedRecords(input.orderId).historyLogs };
+    return { success: true, order: rowToOrder(updatedRow), historyLog };
   } finally {
     lock.releaseLock();
   }
@@ -221,6 +233,18 @@ function findRowsByFirstColumn(ws, value) {
     .matchEntireCell(true)
     .findAll()
     .map((range) => range.getRow());
+}
+
+function nextOrderId() {
+  const ws = sheet(SHEETS.orders);
+  const lastRow = ws.getLastRow();
+  if (lastRow < 2) return "A00001";
+  const ids = ws.getRange(2, 1, lastRow - 1, 1).getDisplayValues().flat();
+  const maxNumber = ids.reduce((max, id) => {
+    const match = String(id || "").trim().match(/^A(\d{5})$/);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  return `A${String(maxNumber + 1).padStart(5, "0")}`;
 }
 
 function rowToOrder(row) {

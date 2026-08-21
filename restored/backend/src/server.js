@@ -52,7 +52,7 @@ function publicImageUrl(image) {
 
 function makeOrder(input) {
   const orderDate = input.orderDate || new Date().toISOString().slice(0, 10);
-  const id = input.id || `${orderDate.replaceAll("-", "")}-${String(Date.now()).slice(-4)}`;
+  const id = input.id || nextOrderId(input.orders || []);
   return {
     id,
     customer: input.customer || "\u672a\u547d\u540d\u5ba2\u6236",
@@ -68,6 +68,14 @@ function makeOrder(input) {
     balance: normalizeNumber(input.balance),
     historyLogs: [],
   };
+}
+
+function nextOrderId(orders) {
+  const maxNumber = orders.reduce((max, order) => {
+    const match = String(order.id || "").match(/^A(\d{5})$/);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  return `A${String(maxNumber + 1).padStart(5, "0")}`;
 }
 
 function publicOrder(order) {
@@ -150,7 +158,7 @@ app.get("/orders/:id", async (req, res) => {
 
 app.post("/orders", async (req, res) => {
   const db = await readDb();
-  const order = makeOrder(req.body || {});
+  const order = makeOrder({ ...(req.body || {}), orders: db.orders });
   if (db.orders.some((item) => item.id === order.id)) {
     res.status(409).json({ success: false, message: "order id already exists" });
     return;
